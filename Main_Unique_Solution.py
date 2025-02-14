@@ -4,53 +4,52 @@ import matplotlib.pyplot as plt
 def solve_fvm(N, Pe, scheme='linear'):
     L = 1.0  # Domain length
     dx = L / N  # Grid spacing
-    u = 1.0  # Velocity
-    Gamma = u * L/Pe  # Diffusion coefficient
+    rho_u = Pe  # product of density and velocity
+    Gamma = 1  # Diffusion coefficient
 
-    b = np.zeros(N)
+    Q = np.zeros(N)
     A = np.zeros((N, N))
 
-    Dw = Gamma / dx  # Diffusion term west
-    De = Gamma / dx  # Diffusion term east
+    A_d = Gamma / dx  # Diffusion term
     
     # Choose advection scheme
     if scheme == 'linear':
-        Fw, Fe = u / 2, u / 2  # Linear scheme
+        A_c_W, A_c_E = rho_u / 2, rho_u / 2  # Linear scheme
         # Apply boundary conditions (Dirichlet)
         # Right-hand side vector
-        b[0] = (u+2*Dw)*0
-        b[-1] = (-u+2*De)*1
-        A[0, 0] = Fw + De + 2*Dw  # Left boundary (phi = 0 at x=0)
-        A[0, 1] = Fe - De
-        A[-1, -1] = -Fw + 2*De + Dw  # Right boundary (phi = 1 at x=L)
-        A[-1, -2] = -Fe-Dw
-    elif scheme == 'upwind':
-        Fw, Fe = max(u, 0), min(u, 0)  # Upwind scheme
-        # Apply boundary conditions (Dirichlet)
-        # Right-hand side vector
-        b[0] = (Fw+2*Dw)*0
-        b[-1] = (-Fe+2*De)*1
+        Q[0] = (2*A_c_W+2*A_d)*0        # Equation (13)
+        Q[-1] = (-2*A_c_W+2*A_d)*1      # Equation (14)
         # Left hand side matrix
-        A[0, 0] = Fw-Fe + De + 2*Dw  # Left boundary (phi = 0 at x=0)
-        A[0, 1] = Fe - De
-        A[-1, -1] = -Fe+Fw+2*De + Dw  # Right boundary (phi = 1 at x=L)
-        A[-1, -2] = -Fw-Dw
+        A[0, 0] = A_c_W + 3*A_d         # Equation (13)
+        A[-1, -1] = -A_c_W + 3*A_d      # Equation (14)
+    elif scheme == 'upwind':
+        A_c_W, A_c_E = max(rho_u, 0), min(rho_u, 0)  # Upwind scheme
+        # Apply boundary conditions (Dirichlet)
+        # Right-hand side vector
+        Q[0] = (A_c_W+2*A_d)*0          # Equation (13)
+        Q[-1] = (-A_c_E+2*A_d)*1        # Equation (14)
+        # Left hand side matrix
+        A[0, 0] = A_c_W-A_c_E + 3*A_d   # Equation (13)
+        A[-1, -1] = A_c_W-A_c_E+3*A_d   # Equation (14)
     else:
         raise ValueError("Unknown scheme. Use 'linear' or 'upwind'.")
+    
+    A[0, 1] = A_c_E - A_d       # Equation (13)
+    A[-1, -2] = -A_c_E-A_d      # Equation (14)
 
     # Coefficients     
-    aW = -Fw-Dw
-    aE = Fe-De
-    aP = -aW-aE
+    A_W = -A_c_W-A_d
+    A_E = A_c_E-A_d
+    A_P = -A_W-A_E
     
     # Construct coefficient matrix A
     for i in range(1, N-1):
-        A[i, i-1] = aW
-        A[i, i] = aP
-        A[i, i+1] = aE
+        A[i, i-1] = A_W
+        A[i, i] = A_P
+        A[i, i+1] = A_E
 
     # Solve the system
-    phi = np.linalg.solve(A, b)
+    phi = np.linalg.solve(A, Q)
     x = np.linspace(dx/2, L - dx/2, N)  # Compute cell center positions
     
     return x, phi
