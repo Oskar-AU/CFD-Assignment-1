@@ -17,35 +17,35 @@ def solve_fvm(N, Pe, scheme='linear'):
         A_c_W, A_c_E = rho_u / 2, rho_u / 2  # Linear scheme
         # Apply boundary conditions (Dirichlet)
         # Right-hand side vector
-        Q[0] = (2*A_c_W+2*A_d)*0        # Equation (13)
-        Q[-1] = (-2*A_c_W+2*A_d)*1      # Equation (14)
+        Q[0]  = ( 2*A_c_W + 2*A_d)*0    # Equation (13)
+        Q[-1] = (-2*A_c_W + 2*A_d)*1    # Equation (14)
         # Left hand side matrix
-        A[0, 0] = A_c_W + 3*A_d         # Equation (13)
+        A[0, 0]   =  A_c_W + 3*A_d      # Equation (13)
         A[-1, -1] = -A_c_W + 3*A_d      # Equation (14)
     elif scheme == 'upwind':
         A_c_W, A_c_E = max(rho_u, 0), min(rho_u, 0)  # Upwind scheme
         # Apply boundary conditions (Dirichlet)
         # Right-hand side vector
-        Q[0] = (A_c_W+2*A_d)*0          # Equation (13)
-        Q[-1] = (-A_c_E+2*A_d)*1        # Equation (14)
+        Q[0] =  ( A_c_W + 2*A_d)*0      # Equation (13)
+        Q[-1] = (-A_c_E + 2*A_d)*1      # Equation (14)
         # Left hand side matrix
-        A[0, 0] = A_c_W-A_c_E + 3*A_d   # Equation (13)
-        A[-1, -1] = A_c_W-A_c_E+3*A_d   # Equation (14)
+        A[0, 0]   = A_c_W-A_c_E + 3*A_d # Equation (13)
+        A[-1, -1] = A_c_W-A_c_E + 3*A_d # Equation (14)
     else:
         raise ValueError("Unknown scheme. Use 'linear' or 'upwind'.")
     
-    A[0, 1] = A_c_E - A_d       # Equation (13)
-    A[-1, -2] = -A_c_E-A_d      # Equation (14)
+    A[0, 1]   =  A_c_E - A_d            # Equation (13)
+    A[-1, -2] = -A_c_W - A_d            # Equation (14)
 
     # Coefficients     
-    A_W = -A_c_W-A_d
-    A_E = A_c_E-A_d
-    A_P = -A_W-A_E
+    A_W = -A_c_W - A_d
+    A_E =  A_c_E - A_d
+    A_P = -A_W - A_E
     
     # Construct coefficient matrix A
     for i in range(1, N-1):
         A[i, i-1] = A_W
-        A[i, i] = A_P
+        A[i, i]   = A_P
         A[i, i+1] = A_E
 
     # Solve the system
